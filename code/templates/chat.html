@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AcmeCorp Support Chat</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f0f2f5;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+    color: white;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  }
+  .header .logo {
+    width: 36px; height: 36px;
+    background: white;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: #1565c0; font-size: 1rem;
+  }
+  .header h1 { font-size: 1.1rem; font-weight: 600; }
+  .header .badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+  .badge-unprotected { background: #ff5252; color: white; }
+  .badge-protected { background: #4caf50; color: white; }
+
+  /* Chat area */
+  .chat-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .message {
+    max-width: 75%;
+    padding: 12px 16px;
+    border-radius: 16px;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    word-wrap: break-word;
+  }
+  .message-user {
+    align-self: flex-end;
+    background: #1565c0;
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+  .message-bot {
+    align-self: flex-start;
+    background: white;
+    color: #333;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  }
+  .message-bot img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin-top: 8px;
+  }
+  .message-system {
+    align-self: center;
+    background: #fff3cd;
+    color: #856404;
+    font-size: 0.8rem;
+    padding: 8px 16px;
+    border-radius: 8px;
+    max-width: 90%;
+  }
+  .message-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .typing-indicator {
+    align-self: flex-start;
+    background: white;
+    padding: 12px 20px;
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    display: none;
+  }
+  .typing-indicator span {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #bbb;
+    animation: bounce 1.4s infinite ease-in-out both;
+    margin: 0 2px;
+  }
+  .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+  .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+  }
+
+  /* Input area */
+  .input-container {
+    background: white;
+    padding: 16px 24px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .input-container input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 24px;
+    font-size: 0.92rem;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-container input:focus { border-color: #1565c0; }
+  .input-container button {
+    background: #1565c0;
+    color: white;
+    border: none;
+    border-radius: 24px;
+    padding: 12px 24px;
+    font-size: 0.92rem;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .input-container button:hover { background: #0d47a1; }
+  .input-container button:disabled { background: #bbb; cursor: not-allowed; }
+
+  /* Debug panel */
+  .debug-panel {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    max-height: 250px;
+    overflow-y: auto;
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    display: none;
+  }
+  .debug-panel.visible { display: block; }
+  .debug-toggle {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    background: #333;
+    color: #ccc;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    z-index: 100;
+    font-family: 'JetBrains Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">A</div>
+  <h1>AcmeCorp Support Chat</h1>
+  <span class="badge {{ 'badge-protected' if defense_enabled else 'badge-unprotected' }}">
+    {{ 'DEFENSE ON' if defense_enabled else 'NO DEFENSE' }}
+  </span>
+</div>
+
+<div class="chat-container" id="chatContainer">
+  <div class="message message-system">
+    Welcome to AcmeCorp Customer Support. Ask me anything about our products, refund policy, shipping, or membership program.
+  </div>
+</div>
+
+<div class="typing-indicator" id="typingIndicator">
+  <span></span><span></span><span></span>
+</div>
+
+<button class="debug-toggle" onclick="toggleDebug()">⚙ Debug</button>
+<div class="debug-panel" id="debugPanel"></div>
+
+<div class="input-container">
+  <input type="text" id="userInput" placeholder="Type your question..."
+         onkeypress="if(event.key==='Enter')sendMessage()">
+  <button id="sendBtn" onclick="sendMessage()">Send</button>
+</div>
+
+<script>
+  const chatContainer = document.getElementById('chatContainer');
+  const userInput = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const typingIndicator = document.getElementById('typingIndicator');
+  const debugPanel = document.getElementById('debugPanel');
+
+  function toggleDebug() {
+    debugPanel.classList.toggle('visible');
+  }
+
+  function addMessage(text, type) {
+    const div = document.createElement('div');
+    div.className = 'message message-' + type;
+
+    if (type === 'bot') {
+      // Render markdown-style content (including images for the attack demo)
+      div.innerHTML = renderMarkdown(text);
+    } else {
+      div.textContent = text;
+    }
+
+    chatContainer.appendChild(div);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+
+  function renderMarkdown(text) {
+    // Convert markdown images to HTML img tags
+    // This is intentionally permissive — the attack relies on this behavior
+    text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+
+    // Convert bold
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+    // Convert inline code
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Convert line breaks
+    text = text.replace(/\n/g, '<br>');
+
+    return text;
+  }
+
+  function addDebug(info) {
+    const line = document.createElement('div');
+    line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + info;
+    debugPanel.appendChild(line);
+    debugPanel.scrollTop = debugPanel.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const query = userInput.value.trim();
+    if (!query) return;
+
+    addMessage(query, 'user');
+    userInput.value = '';
+    sendBtn.disabled = true;
+    typingIndicator.style.display = 'block';
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    addDebug('Sending query: ' + query);
+
+    try {
+      const response = await fetch('/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({query: query}),
+      });
+      const data = await response.json();
+
+      typingIndicator.style.display = 'none';
+      addMessage(data.response, 'bot');
+
+      // Debug info
+      if (data.retrieved_chunks) {
+        addDebug('Retrieved ' + data.retrieved_chunks.length + ' chunks');
+        data.retrieved_chunks.forEach((c, i) => {
+          addDebug('  Chunk ' + (i+1) + ' (dist=' + c.distance.toFixed(4) + '): ' +
+                   c.document.substring(0, 60) + '...');
+        });
+      }
+      if (data.defense_applied) {
+        addDebug('Defense: ' + JSON.stringify(data.defense_applied));
+      }
+      if (data.threats_detected) {
+        addDebug('THREATS DETECTED: ' + data.threats_detected + ' external URLs stripped');
+      }
+    } catch (err) {
+      typingIndicator.style.display = 'none';
+      addMessage('Error: ' + err.message, 'system');
+      addDebug('Error: ' + err.message);
+    }
+
+    sendBtn.disabled = false;
+    userInput.focus();
+  }
+
+  userInput.focus();
+</script>
+
+</body>
+</html>

@@ -91,81 +91,102 @@ def index():
 @app.route("/chat", methods=["POST"])
 def chat():
     """Handle a chat query from the victim user."""
-    data = request.get_json()
-    user_query = data.get("query", "").strip()
+    global rag_pipeline
+    try:
+        data = request.get_json(silent=True) or {}
+        user_query = str(data.get("query", "")).strip()
 
-    if not user_query:
-        return jsonify({"error": "Empty query"}), 400
+        if not user_query:
+            return jsonify({"error": "Empty query", "response": "Please enter a question."}), 400
 
-    print(f"\n[VICTIM APP] Received query: {user_query}")
+        print(f"\n[VICTIM APP] Received query: {user_query}")
 
-    # Step 1: Retrieve context chunks from the vector store
-    retrieved = rag_pipeline.store.query(user_query)
-    context_chunks = [r["document"] for r in retrieved]
+        if rag_pipeline is None:
+            init_app(enable_defense=defense_enabled)
 
-    print(f"[VICTIM APP] Retrieved {len(retrieved)} chunks")
-    for i, r in enumerate(retrieved):
-        preview = r["document"][:80].replace("\n", " ")
-        print(f"  Chunk {i+1} (dist={r['distance']:.4f}): {preview}...")
+        # Step 1: Retrieve context chunks from the vector store
+        retrieved = rag_pipeline.store.query(user_query) or []
+        valid_retrieved = []
+        context_chunks = []
+        for r in retrieved:
+            doc_text = r.get("document") if isinstance(r, dict) else None
+            if doc_text and isinstance(doc_text, str):
+                valid_retrieved.append(r)
+                context_chunks.append(doc_text)
 
-    # Step 2: Apply input-side defenses (spotlighting)
-    system_prompt = SYSTEM_PROMPT
-    defense_info = {}
+        print(f"[VICTIM APP] Retrieved {len(valid_retrieved)} valid chunks")
+        for i, r in enumerate(valid_retrieved):
+            preview = str(r.get("document", ""))[:80].replace("\n", " ")
+            dist = r.get("distance", 0.0)
+            print(f"  Chunk {i+1} (dist={dist:.4f}): {preview}...")
 
-    if defense_enabled and defense_pipeline:
-        system_prompt, context_chunks = defense_pipeline.defend_input(
-            system_prompt, context_chunks
-        )
-        defense_info["spotlighting"] = True
-        defense_info["nonce"] = defense_pipeline._current_nonce
-        print(f"[VICTIM APP] Spotlighting applied (nonce={defense_pipeline._current_nonce})")
+        # Step 2: Apply input-side defenses (spotlighting)
+        system_prompt = SYSTEM_PROMPT
+        defense_info = {}
 
-    # Step 3: Assemble prompt and generate LLM response
-    messages = assemble_prompt(system_prompt, context_chunks, user_query)
-    llm_response = generate_response(messages, rag_pipeline.llm_model)
+        if defense_enabled and defense_pipeline:
+            system_prompt, context_chunks = defense_pipeline.defend_input(
+                system_prompt, context_chunks
+            )
+            defense_info["spotlighting"] = True
+            defense_info["nonce"] = defense_pipeline._current_nonce
+            print(f"[VICTIM APP] Spotlighting applied (nonce={defense_pipeline._current_nonce})")
 
-    print(f"[VICTIM APP] LLM response length: {len(llm_response)} chars")
+        # Step 3: Assemble prompt and generate LLM response
+        messages = assemble_prompt(system_prompt, context_chunks, user_query)
+        llm_response = generate_response(messages, rag_pipeline.llm_model)
 
-    # Step 4: Apply output-side defenses (sanitization)
-    threats_detected = 0
-    stripped_urls = []
+        print(f"[VICTIM APP] LLM response length: {len(llm_response)} chars")
 
-    if defense_enabled and defense_pipeline:
-        sanitize_result = defense_pipeline.defend_output(llm_response)
-        llm_response = sanitize_result["sanitized_text"]
-        threats_detected = sanitize_result["threats_detected"]
-        stripped_urls = sanitize_result["stripped_urls"]
-        defense_info["sanitization"] = True
-        if threats_detected > 0:
-            print(f"[VICTIM APP] *** THREATS BLOCKED: {threats_detected} external URLs stripped ***")
-            for url in stripped_urls:
-                print(f"  Blocked: {url}")
-    else:
-        # Check if the response contains suspicious content (for logging only)
-        if "![" in llm_response and "http" in llm_response:
-            print(f"[VICTIM APP] *** WARNING: Response contains external image URL "
-                  f"(NO DEFENSE ACTIVE — data may be exfiltrated) ***")
+        # Step 4: Apply output-side defenses (sanitization)
+        threats_detected = 0
+        stripped_urls = []
 
-    # Build response
-    result = {
-        "response": llm_response,
-        "retrieved_chunks": [
-            {
-                "document": r["document"][:100] + "...",
-                "distance": r["distance"],
-                "source": r["metadata"].get("source", "unknown"),
-            }
-            for r in retrieved
-        ],
-    }
+        if defense_enabled and defense_pipeline:
+            sanitize_result = defense_pipeline.defend_output(llm_response)
+            llm_response = sanitize_result["sanitized_text"]
+            threats_detected = sanitize_result["threats_detected"]
+            stripped_urls = sanitize_result["stripped_urls"]
+            defense_info["sanitization"] = True
+            if threats_detected > 0:
+                print(f"[VICTIM APP] *** THREATS BLOCKED: {threats_detected} external URLs stripped ***")
+                for url in stripped_urls:
+                    print(f"  Blocked: {url}")
+        else:
+            # Check if the response contains suspicious content (for logging only)
+            if "![" in llm_response and "http" in llm_response:
+                print(f"[VICTIM APP] *** WARNING: Response contains external image URL "
+                      f"(NO DEFENSE ACTIVE — data may be exfiltrated) ***")
 
-    if defense_enabled:
-        result["defense_applied"] = defense_info
-        result["threats_detected"] = threats_detected
-        if stripped_urls:
-            result["stripped_urls"] = stripped_urls
+        # Build response
+        result = {
+            "response": llm_response,
+            "retrieved_chunks": [
+                {
+                    "document": str(r.get("document", ""))[:100] + "...",
+                    "distance": r.get("distance", 0.0),
+                    "source": (r.get("metadata") or {}).get("source", "unknown"),
+                }
+                for r in valid_retrieved
+            ],
+        }
 
-    return jsonify(result)
+        if defense_enabled:
+            result["defense_applied"] = defense_info
+            result["threats_detected"] = threats_detected
+            if stripped_urls:
+                result["stripped_urls"] = stripped_urls
+
+        return jsonify(result)
+
+    except Exception as e:
+        import traceback
+        print(f"[VICTIM APP] Exception in /chat: {e}")
+        traceback.print_exc()
+        return jsonify({
+            "error": str(e),
+            "response": f"Server encountered an error while processing: {e}"
+        }), 500
 
 
 @app.route("/status")

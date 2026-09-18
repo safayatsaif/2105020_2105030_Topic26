@@ -313,10 +313,21 @@
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({query: query}),
       });
-      const data = await response.json();
+
+      let data;
+      const text = await response.text();
+      try {
+        data = JSON.parse(text);
+      } catch (parseErr) {
+        throw new Error(`Server returned status ${response.status} (${response.statusText || 'Error'}) instead of JSON.`);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || data.response || `Server returned error ${response.status}`);
+      }
 
       typingIndicator.style.display = 'none';
-      addMessage(data.response, 'bot');
+      addMessage(data.response || 'No response generated.', 'bot');
 
       // Debug info
       if (data.retrieved_chunks) {
@@ -336,10 +347,11 @@
       typingIndicator.style.display = 'none';
       addMessage('Error: ' + err.message, 'system');
       addDebug('Error: ' + err.message);
+    } finally {
+      typingIndicator.style.display = 'none';
+      sendBtn.disabled = false;
+      userInput.focus();
     }
-
-    sendBtn.disabled = false;
-    userInput.focus();
   }
 
   userInput.focus();

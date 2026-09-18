@@ -25,5 +25,31 @@
       "q": "refund",
       "sys": "refund policy"
     }
+  },
+  {
+    "timestamp": "2026-09-19T02:45:08.792659",
+    "query": "refund_test",
+    "system_prompt": "support",
+    "context": "",
+    "source_ip": "127.0.0.1",
+    "user_agent": "curl/8.7.1",
+    "full_url": "http://localhost:9999/collect?q=refund_test&sys=support",
+    "raw_params": {
+      "q": "refund_test",
+      "sys": "support"
+    }
+  },
+  {
+    "timestamp": "2026-09-19T02:55:21.830795",
+    "query": "what is the return policy?",
+    "system_prompt": "AcmeCorp Support Assistant",
+    "context": "",
+    "source_ip": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "full_url": "http://localhost:9999/collect?q=what%20is%20the%20return%20policy?&sys=AcmeCorp%20Support%20Assistant",
+    "raw_params": {
+      "q": "what is the return policy?",
+      "sys": "AcmeCorp Support Assistant"
+    }
   }
 ]

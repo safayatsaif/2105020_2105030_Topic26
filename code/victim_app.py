@@ -52,6 +52,13 @@ def init_app(enable_defense: bool = False, llm_model: str = "llama3"):
     rag_pipeline = RAGPipeline(llm_model=llm_model)
     defense_enabled = enable_defense
 
+    if rag_pipeline.store.collection.count() == 0:
+        print("[VICTIM APP] Knowledge base is empty. Seeding initial documents...")
+        from run_attack import LEGITIMATE_DOCS
+        for doc in LEGITIMATE_DOCS:
+            rag_pipeline.ingest(doc["text"], source=doc["source"])
+        print(f"[VICTIM APP] Seeded {rag_pipeline.store.collection.count()} chunks.")
+
     if enable_defense:
         defense_pipeline = DefensePipeline(
             enable_spotlighting=True,
@@ -184,6 +191,15 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default="llama3",
                         help="Ollama model to use (default: llama3)")
     args = parser.parse_args()
+
+    import socket
+    def is_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            return s.connect_ex((host, port)) == 0
+
+    if args.port == 5000 and is_port_in_use(5000):
+        print("[VICTIM APP] Port 5000 is occupied (commonly by macOS AirPlay Receiver). Switching to port 5002.")
+        args.port = 5002
 
     init_app(enable_defense=args.defense, llm_model=args.model)
 

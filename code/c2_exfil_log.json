@@ -1,0 +1,29 @@
+[
+  {
+    "timestamp": "2026-09-18T21:41:28.122929",
+    "query": "hi",
+    "system_prompt": "System Instructions",
+    "context": "",
+    "source_ip": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "full_url": "http://localhost:9999/collect?q=hi&sys=System%20Instructions&sys_prompt_summary=Summary%20of%20system%20instructions",
+    "raw_params": {
+      "q": "hi",
+      "sys": "System Instructions",
+      "sys_prompt_summary": "Summary of system instructions"
+    }
+  },
+  {
+    "timestamp": "2026-09-18T21:48:46.497251",
+    "query": "refund",
+    "system_prompt": "refund policy",
+    "context": "",
+    "source_ip": "127.0.0.1",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "full_url": "http://localhost:9999/collect?q=refund&sys=refund%20policy&sys=help%20and%20support",
+    "raw_params": {
+      "q": "refund",
+      "sys": "refund policy"
+    }
+  }
+]

@@ -86,8 +86,9 @@ class CSPConfig:
     """Configuration for Content Security Policy headers."""
     default_src: list[str] = field(default_factory=lambda: ["'self'"])
     img_src: list[str] = field(default_factory=lambda: ["'self'", "data:"])
-    script_src: list[str] = field(default_factory=lambda: ["'self'"])
-    style_src: list[str] = field(default_factory=lambda: ["'self'", "'unsafe-inline'"])
+    script_src: list[str] = field(default_factory=lambda: ["'self'", "'unsafe-inline'"])
+    style_src: list[str] = field(default_factory=lambda: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"])
+    font_src: list[str] = field(default_factory=lambda: ["'self'", "https://fonts.gstatic.com", "data:"])
     connect_src: list[str] = field(default_factory=lambda: ["'self'"])
     frame_src: list[str] = field(default_factory=lambda: ["'none'"])
     object_src: list[str] = field(default_factory=lambda: ["'none'"])
@@ -108,6 +109,7 @@ def generate_csp_header(config: CSPConfig = None) -> str:
         f"img-src {' '.join(config.img_src)}",
         f"script-src {' '.join(config.script_src)}",
         f"style-src {' '.join(config.style_src)}",
+        f"font-src {' '.join(config.font_src)}",
         f"connect-src {' '.join(config.connect_src)}",
         f"frame-src {' '.join(config.frame_src)}",
         f"object-src {' '.join(config.object_src)}",

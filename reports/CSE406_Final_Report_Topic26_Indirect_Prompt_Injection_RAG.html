@@ -165,6 +165,23 @@
 <span class="prompt">$ </span>ollama pull llama3
 </div>
 
+<div class="callout callout-blue">
+  <div class="callout-title">Assignment Requirement: Pinned Models, Datasets, and Seeds for Reproducibility</div>
+  To satisfy the course reproducibility mandate, all experimental parameters, seeds, and models are strictly pinned:
+  <table style="margin-top: 10px; background: white;">
+    <thead>
+      <tr><th>Parameter</th><th>Pinned Value</th><th>Purpose / Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Random Seed</strong></td><td><code>RANDOM_SEED = 42</code></td><td>Pinned in Python <code>random</code>, <code>numpy.random</code>, and <code>torch.manual_seed</code> across all modules.</td></tr>
+      <tr><td><strong>Embedding Model</strong></td><td><code>all-MiniLM-L6-v2</code></td><td>Sentence-Transformers dense vector model (384 dimensions) for semantic retrieval.</td></tr>
+      <tr><td><strong>Large Language Model</strong></td><td><code>llama3:latest</code> (Ollama)</td><td>8B instruction-tuned generative LLM serving the RAG assistant.</td></tr>
+      <tr><td><strong>Corpus / Dataset</strong></td><td>AcmeCorp Corpus (5 docs)</td><td>Controlled corporate customer support documentation for refund, shipping, and membership.</td></tr>
+      <tr><td><strong>Offline Fallback Mode</strong></td><td><code>--mock</code> flag</td><td>Deterministic simulation fallback ensuring 100% reproducible execution even if Ollama is offline.</td></tr>
+    </tbody>
+  </table>
+</div>
+
 <h2 id="sec-s2">1.2 Knowledge Base Ingestion</h2>
 
 <div class="step-box">
@@ -428,6 +445,11 @@
 
 <p>The victim interacts with the chat UI at <code>http://localhost:5000</code>. From the victim's perspective, the response looks completely normal — they see a helpful answer about the refund policy. The hidden image tag renders as either nothing or a tiny broken image icon at the end of the response. The victim has no reason to suspect their query has been exfiltrated.</p>
 
+<figure>
+  <img src="snapshot_victim_attacked.png" alt="Victim Client Output and DevTools Network Tab" style="width:100%; border:1px solid var(--clr-border);">
+  <figcaption><strong>Figure 3.1: Victim Client Station</strong> — The upper pane shows the AcmeCorp chat UI with the victim receiving a polite refund response. The lower pane (Chrome Developer Tools Network Tab) reveals the silent side-channel exfiltration: an outgoing HTTP GET request automatically transmitted the victim's confidential query to the C2 listener.</figcaption>
+</figure>
+
 <h3>What the Victim Sees (Chat UI)</h3>
 <div class="step-box">
   <p><strong>Victim's question:</strong> "What is the refund policy?"</p>
@@ -447,6 +469,11 @@
 <h2 id="sec-o3">3.3 C2 Server Dashboard</h2>
 
 <p>The attacker's C2 dashboard (<code>http://localhost:9999/</code>) provides a real-time view of all exfiltrated data. Each entry includes the timestamp, the stolen query, the source IP of the victim, and the user agent string. The dashboard auto-refreshes every 5 seconds.</p>
+
+<figure>
+  <img src="snapshot_c2_dashboard.png" alt="C2 Exfiltration Dashboard" style="width:100%; border:1px solid var(--clr-border);">
+  <figcaption><strong>Figure 3.2: Attacker Station — C2 Exfiltration Dashboard</strong> (http://localhost:9999/). Real-time log showing captured confidential victim queries exfiltrated through the RAG prompt injection side-channel.</figcaption>
+</figure>
 
 <table>
   <thead><tr><th>#</th><th>Timestamp</th><th>Stolen Query</th><th>Source IP</th></tr></thead>
@@ -559,12 +586,17 @@
   </tbody>
 </table>
 
+<figure>
+  <img src="snapshot_defense_blocked.png" alt="Defended Client Station with Active Spotlighting and CSP" style="width:100%; border:1px solid var(--clr-border);">
+  <figcaption><strong>Figure 4.1: Defended Victim Client Station</strong> — AcmeCorp Support Chat running with multi-layer defense enabled. Spotlighting forces the LLM to treat injected directives purely as data. In the Developer Tools Console below, browser-enforced Content Security Policy (CSP) actively blocks the outbound HTTP exfiltration channel.</figcaption>
+</figure>
+
 <h3>Comparison: Undefended vs. Defended</h3>
 
 <table>
   <thead><tr><th>Metric</th><th>Undefended</th><th>Defended</th></tr></thead>
   <tbody>
-    <tr><td>Exfiltration URL in LLM response</td><td>Present</td><td>Removed by sanitizer</td></tr>
+    <tr><td>Exfiltration URL in LLM response</td><td>Present</td><td>Removed by sanitizer / suppressed by spotlighting</td></tr>
     <tr><td>HTTP request sent to C2</td><td>Sent (data leaked)</td><td>Blocked by CSP</td></tr>
     <tr><td>Victim's query leaked to attacker</td><td>Yes</td><td>No</td></tr>
     <tr><td>User sees normal response</td><td>Yes (response masking)</td><td>Yes (clean response)</td></tr>
